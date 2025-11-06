@@ -1,45 +1,52 @@
 import os
 import pandas as pd
 import requests as rq
+import time
 
-API_KEY = "6f2adb4a3a5be330f97f688dc90405ac"
-BASE_URL = "http://api.openweathermap.org/geo/1.0/direct"
+from settings import API_KEY, BASE_URL_OW_GEO, villes
 
-villes = [
-    "Paris", "Marseille", "Lyon", "Toulouse", "Nice", "Nantes", "Strasbourg", "Montpellier",
-    "Bordeaux", "Lille", "Rennes", "Reims", "Le Havre", "Saint-Étienne", "Toulon", "Grenoble",
-    "Dijon", "Angers", "Nîmes", "Villeurbanne", "Clermont-Ferrand", "Saint-Denis", "Le Mans",
-    "Aix-en-Provence", "Brest", "Tours", "Amiens", "Limoges", "Annecy", "Perpignan",
-    "Boulogne-Billancourt", "Metz", "Besançon", "Orléans", "Rouen"
-]
+from weather_city import get_city_weather
+from best_city import best_cities
+from map import get_map_weather
+from hotels_list import get_hotel_per_city
+from hotel_map import hotel_map_maker
 
-csv_file = "cities_fr.csv"
+csv_file = "output/cities_fr.csv"
 
-if not os.path.exists(csv_file):
-    df = pd.DataFrame(columns=["city", "lat", "lon"])
-    df.to_csv(csv_file, index=False, sep=';')
+def init_main_csv():
+    if not os.path.exists(csv_file):
+        df = pd.DataFrame(columns=["city", "lat", "lon"])
+        df.to_csv(csv_file, index=False, sep=';')
 
-for ville in villes:
-    params = {
-        "q": f"{ville},FR",
-        "limit": 1,
-        "appid": API_KEY
-    }
-    response = rq.get(BASE_URL, params=params)
+    for ville in villes:
+        params = {
+            "q": f"{ville},FR",
+            "limit": 1,
+            "appid": API_KEY
+        }
+        response = rq.get(BASE_URL_OW_GEO, params=params)
 
-    if response.status_code == 200:
-        data = response.json()
-        if data:
-            info = data[0]
-            lat = info.get("lat")
-            lon = info.get("lon")
+        if response.status_code == 200:
+            data = response.json()
+            if data:
+                info = data[0]
+                lat = info.get("lat")
+                lon = info.get("lon")
 
-            # Append to CSV
-            new_row = pd.DataFrame([{"city": ville, "lat": lat, "lon": lon}])
-            new_row.to_csv(csv_file, mode='a', header=False, index=False, sep=';')
+                # Append to CSV
+                new_row = pd.DataFrame([{"city": ville, "lat": lat, "lon": lon}])
+                new_row.to_csv(csv_file, mode='a', header=False, index=False, sep=';')
 
-            print(f"Added {ville}: lat={lat}, lon={lon}")
-        else:
-            print(f"No data for {ville}")
-    else:
-        print(f"Error {response.status_code} fetching {ville}")
+if __name__ == "__main__" :
+    os.makedirs("output", exist_ok=True)
+    init_main_csv()
+    time.sleep(1.0)
+    get_city_weather()
+    time.sleep(1.0)
+    best_cities()
+    time.sleep(1.0)
+    get_map_weather()
+    time.sleep(1.0)
+    get_hotel_per_city()
+    time.sleep(1.0)
+    hotel_map_maker()
